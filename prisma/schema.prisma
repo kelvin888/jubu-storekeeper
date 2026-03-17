@@ -1,0 +1,77 @@
+// StoreKeeper Pro — Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Terminal {
+  id        String   @id @default(cuid())
+  name      String
+  location  String
+  createdAt DateTime @default(now())
+
+  users   User[]
+  parcels Parcel[]
+}
+
+enum Role {
+  TERMINAL_OFFICER
+  TERMINAL_MANAGER
+  SUPER_ADMIN
+}
+
+model User {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  password   String
+  role       Role     @default(TERMINAL_OFFICER)
+  terminalId String?
+  createdAt  DateTime @default(now())
+
+  terminal         Terminal? @relation(fields: [terminalId], references: [id])
+  custodianParcels Parcel[]  @relation("CustodianParcels")
+}
+
+enum ParcelStatus {
+  IN_STORE
+  COLLECTED
+}
+
+model Parcel {
+  id              String       @id @default(cuid())
+  batchId         String       @unique
+  itemDescription String
+  itemCategory    String?
+  driverName      String?
+  vehicleNumber   String?
+  senderName      String
+  receiverName    String
+  receiverPhone   String
+  deliveryFee     Decimal      @default(0) @db.Decimal(12, 2)
+  storageFee      Decimal      @default(0) @db.Decimal(12, 2)
+  status          ParcelStatus @default(IN_STORE)
+  custodianId     String?
+  terminalId      String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  terminal  Terminal @relation(fields: [terminalId], references: [id])
+  custodian User?    @relation("CustodianParcels", fields: [custodianId], references: [id])
+  handover  Handover?
+}
+
+model Handover {
+  id          String   @id @default(cuid())
+  parcelId    String   @unique
+  signature   String   @db.Text
+  idVerified  Boolean  @default(false)
+  confirmedAt DateTime @default(now())
+
+  parcel Parcel @relation(fields: [parcelId], references: [id])
+}
