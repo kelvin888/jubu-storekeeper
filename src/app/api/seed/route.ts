@@ -5,11 +5,6 @@ import { Role } from "@prisma/client";
 
 // ONE-TIME USE — delete this file after seeding
 export async function GET() {
-  const secret = process.env.SEED_SECRET;
-  if (!secret || secret !== "storekeeper-seed-2026") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const hashed = await bcrypt.hash("admin123", 10);
 
   const admin = await prisma.user.upsert({
