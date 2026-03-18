@@ -23,16 +23,24 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = req.nextUrl;
   const search = searchParams.get("search") ?? "";
+  const statusParam = searchParams.get("status") ?? "";
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const perPage = 10;
 
+  const validStatuses = ["IN_STORE", "COLLECTED"];
+  const statusFilter = validStatuses.includes(statusParam)
+    ? { status: statusParam as "IN_STORE" | "COLLECTED" }
+    : {};
+
   const where = {
     ...(session.user.terminalId ? { terminalId: session.user.terminalId } : {}),
+    ...statusFilter,
     ...(search
       ? {
           OR: [
             { itemDescription: { contains: search, mode: "insensitive" as const } },
             { receiverName: { contains: search, mode: "insensitive" as const } },
+            { receiverPhone: { contains: search, mode: "insensitive" as const } },
             { batchId: { contains: search, mode: "insensitive" as const } },
             { custodian: { name: { contains: search, mode: "insensitive" as const } } },
           ],

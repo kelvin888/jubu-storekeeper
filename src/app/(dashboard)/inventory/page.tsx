@@ -35,6 +35,7 @@ export default function InventoryPage() {
   const [total, setTotal] = useState(0);
   const [perPage, setPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "IN_STORE" | "COLLECTED">("ALL");
 
   const fetchParcels = useCallback(async () => {
     setLoading(true);
@@ -42,6 +43,7 @@ export default function InventoryPage() {
       const params = new URLSearchParams({
         page: String(page),
         ...(query ? { search: query } : {}),
+        ...(statusFilter !== "ALL" ? { status: statusFilter } : {}),
       });
       const res = await fetch(`/api/parcels?${params}`);
       if (res.ok) {
@@ -53,7 +55,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, query]);
+  }, [page, query, statusFilter]);
 
   useEffect(() => {
     fetchParcels();
@@ -63,6 +65,11 @@ export default function InventoryPage() {
     e.preventDefault();
     setPage(1);
     setQuery(search);
+  }
+
+  function handleStatusFilter(val: "ALL" | "IN_STORE" | "COLLECTED") {
+    setStatusFilter(val);
+    setPage(1);
   }
 
   const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -80,12 +87,33 @@ export default function InventoryPage() {
         </Link>
       </div>
 
+      {/* Status Filter Tabs */}
+      <div className="flex gap-2 mb-4">
+        {(["ALL", "IN_STORE", "COLLECTED"] as const).map((val) => {
+          const labels = { ALL: "All", IN_STORE: "In Store", COLLECTED: "Collected" };
+          const active = statusFilter === val;
+          return (
+            <button
+              key={val}
+              onClick={() => handleStatusFilter(val)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                active
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-gray-600 border-gray-300 hover:border-indigo-400 hover:text-indigo-600"
+              }`}
+            >
+              {labels[val]}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Search */}
       <form onSubmit={handleSearch} className="mb-6">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
-            placeholder="Search by Item Description or Custodian Name…"
+            placeholder="Search by item, receiver, phone or batch ID…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -160,12 +188,21 @@ export default function InventoryPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     {parcel.status === ParcelStatus.IN_STORE ? (
-                      <Link
-                        href={`/inventory/${parcel.id}`}
-                        className="text-indigo-600 hover:underline text-sm font-medium"
-                      >
-                        Update
-                      </Link>
+                      <div className="flex items-center justify-end gap-3">
+                        <Link
+                          href={`/pickup/${parcel.id}`}
+                          className="text-indigo-600 hover:underline text-sm font-semibold"
+                        >
+                          Pickup
+                        </Link>
+                        <span className="text-gray-300">|</span>
+                        <Link
+                          href={`/inventory/${parcel.id}`}
+                          className="text-gray-500 hover:underline text-sm font-medium"
+                        >
+                          Edit
+                        </Link>
+                      </div>
                     ) : (
                       <Link
                         href={`/inventory/${parcel.id}`}

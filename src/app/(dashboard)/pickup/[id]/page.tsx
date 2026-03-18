@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, use } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, Package } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,10 +17,16 @@ interface Parcel {
   itemCategory: string | null;
   receiverName: string;
   receiverPhone: string;
+  senderName: string;
   deliveryFee: string;
   storageFee: string;
   status: ParcelStatus;
   terminal: { name: string; location: string } | null;
+}
+
+interface CollectedState {
+  receiverName: string;
+  confirmedAt: string;
 }
 
 export default function PickupPage({
@@ -30,7 +35,6 @@ export default function PickupPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const router = useRouter();
   const signatureRef = useRef<SignaturePadHandle>(null);
 
   const [parcel, setParcel] = useState<Parcel | null>(null);
@@ -38,6 +42,7 @@ export default function PickupPage({
   const [idVerified, setIdVerified] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
+  const [collected, setCollected] = useState<CollectedState | null>(null);
 
   useEffect(() => {
     fetch(`/api/parcels/${id}`)
@@ -67,7 +72,10 @@ export default function PickupPage({
       });
 
       if (res.ok) {
-        router.push(`/inventory/${id}`);
+        setCollected({
+          receiverName: parcel!.receiverName,
+          confirmedAt: new Date().toISOString(),
+        });
       } else {
         const data = await res.json();
         setError(data.error ?? "Failed to confirm handover");
@@ -90,6 +98,36 @@ export default function PickupPage({
         <Link href="/inventory" className="text-indigo-600 hover:underline text-sm mt-2 inline-block">
           Back to Inventory
         </Link>
+      </div>
+    );
+  }
+
+  if (collected) {
+    return (
+      <div className="max-w-lg mx-auto text-center py-20">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 mb-5">
+          <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-1">Package Collected!</h2>
+        <p className="text-gray-500 text-sm mb-1">
+          Handed over to <span className="font-semibold text-gray-700">{collected.receiverName}</span>
+        </p>
+        <p className="text-gray-400 text-xs mb-8">
+          {new Date(collected.confirmedAt).toLocaleString("en-NG")}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link href="/inventory">
+            <Button variant="outline" className="w-full sm:w-auto">
+              Back to Inventory
+            </Button>
+          </Link>
+          <Link href="/checkin">
+            <Button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700">
+              <Package className="w-4 h-4 mr-2" />
+              New Check-in
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -153,6 +191,28 @@ export default function PickupPage({
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Receiver Identity */}
+      <Card className="mb-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Receiver Identity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Name</p>
+              <p className="font-semibold text-gray-900">{parcel.receiverName}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Phone</p>
+              <p className="font-semibold text-gray-900 font-mono">{parcel.receiverPhone}</p>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2.5 py-1.5">
+            Verbally confirm the receiver&apos;s name and phone number before proceeding.
+          </p>
         </CardContent>
       </Card>
 
