@@ -4,6 +4,6 @@ import { redirect } from "next/navigation";
 export default async function Home() {
   const session = await auth();
   if (session?.user?.role === "SUPER_ADMIN") redirect("/admin");
-  redirect("/inventory");
+  redirect("/overview");
 }
 

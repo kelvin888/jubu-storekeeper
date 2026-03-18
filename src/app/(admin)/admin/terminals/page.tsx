@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Building2, Pencil, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ interface Terminal {
 const EMPTY = { name: "", location: "" };
 
 export default function TerminalsPage() {
+  const router = useRouter();
   const [terminals, setTerminals] = useState<Terminal[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -125,7 +127,11 @@ export default function TerminalsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {terminals.map((t) => (
-            <Card key={t.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={t.id}
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => router.push(`/admin/terminals/${t.id}`)}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base leading-snug">
@@ -133,14 +139,14 @@ export default function TerminalsPage() {
                   </CardTitle>
                   <div className="flex gap-1 flex-shrink-0">
                     <button
-                      onClick={() => openEdit(t)}
+                      onClick={(e) => { e.stopPropagation(); openEdit(t); }}
                       className="p-1.5 text-gray-400 hover:text-indigo-600 rounded transition-colors"
                       title="Edit"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(t.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
                       className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors"
                       title="Delete"
                     >

@@ -46,12 +46,20 @@ export default async function DashboardLayout({
         </div>
 
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+          <Link href="/overview" className="text-indigo-100 hover:text-white transition-colors">
+            Overview
+          </Link>
           <Link href="/checkin" className="text-indigo-100 hover:text-white transition-colors">
             New Check-in
           </Link>
           <Link href="/inventory" className="text-indigo-100 hover:text-white transition-colors">
             Inventory
           </Link>
+          {(user.role === "TERMINAL_MANAGER" || user.role === "SUPER_ADMIN") && (
+            <Link href="/team" className="text-indigo-100 hover:text-white transition-colors">
+              Team
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-3">

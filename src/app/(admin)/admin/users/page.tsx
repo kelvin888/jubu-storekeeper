@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Users, Pencil, Trash2, Plus } from "lucide-react";
+import { Users, Pencil, Trash2, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +56,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [terminals, setTerminals] = useState<Terminal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterTerminalId, setFilterTerminalId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<User | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -148,6 +150,16 @@ export default function UsersPage() {
   const roleLabel = (r: string) =>
     r === "TERMINAL_MANAGER" ? "Manager" : "Officer";
 
+  const filteredUsers = users.filter((u) => {
+    const matchesTerminal = !filterTerminalId || u.terminalId === filterTerminalId;
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      !q ||
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q);
+    return matchesTerminal && matchesSearch;
+  });
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -163,6 +175,49 @@ export default function UsersPage() {
         >
           <Plus className="w-4 h-4 mr-1.5" /> New User
         </Button>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search by name or email…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select
+          value={filterTerminalId || "all"}
+          onValueChange={(v) => setFilterTerminalId(v === "all" ? "" : (v ?? ""))}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue>
+              {filterTerminalId
+                ? (terminals.find((t) => t.id === filterTerminalId)?.name ?? "Unknown")
+                : "All Terminals"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Terminals</SelectItem>
+            {terminals.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {(filterTerminalId || searchQuery) && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setFilterTerminalId(""); setSearchQuery(""); }}
+            className="text-gray-500"
+          >
+            Clear
+          </Button>
+        )}
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
@@ -196,18 +251,20 @@ export default function UsersPage() {
                   Loading…
                 </TableCell>
               </TableRow>
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={5}
                   className="text-center py-12 text-gray-400"
                 >
                   <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  No users yet. Create one to get started.
+                  {users.length === 0
+                    ? "No users yet. Create one to get started."
+                    : "No users match the current filters."}
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((u) => (
+              filteredUsers.map((u) => (
                 <TableRow key={u.id} className="hover:bg-gray-50">
                   <TableCell className="font-medium text-gray-900">
                     {u.name}
@@ -285,18 +342,26 @@ export default function UsersPage() {
               />
             </div>
 
+            {editTarget && (
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide font-semibold">Reset Password</p>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>
                 {editTarget
-                  ? "New Password (leave blank to keep existing)"
+                  ? "New Password"
                   : "Password"}
               </Label>
               <Input
                 type="password"
                 value={form.password}
                 onChange={(e) => set("password", e.target.value)}
-                placeholder="••••••••"
+                placeholder={editTarget ? "Leave blank to keep current password" : "••••••••"}
               />
+              {editTarget && (
+                <p className="text-xs text-gray-400">Leave blank to keep the existing password unchanged.</p>
+              )}
             </div>
 
             <div className="space-y-1.5">

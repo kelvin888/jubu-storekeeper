@@ -46,6 +46,9 @@ export default async function AdminLayout({
             <Link href="/admin/terminals" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-sm font-medium text-white/90">
               Terminals
             </Link>
+            <Link href="/admin/parcels" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-sm font-medium text-white/90">
+              Parcels
+            </Link>
             <Link href="/admin/users" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-sm font-medium text-white/90">
               Staff
             </Link>

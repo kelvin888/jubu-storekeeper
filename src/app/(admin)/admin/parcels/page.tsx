@@ -1,11 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/StatusBadge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -14,38 +19,55 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ParcelStatus } from "@prisma/client";
+
+interface Terminal {
+  id: string;
+  name: string;
+}
 
 interface Parcel {
   id: string;
   batchId: string;
   itemDescription: string;
-  itemCategory: string | null;
+  receiverName: string;
   receiverPhone: string;
-  status: ParcelStatus;
+  status: string;
   createdAt: string;
+  terminal: { id: string; name: string } | null;
   custodian: { id: string; name: string } | null;
 }
 
-export default function InventoryPage() {
+export default function AdminParcelsPage() {
+  const [terminals, setTerminals] = useState<Terminal[]>([]);
   const [parcels, setParcels] = useState<Parcel[]>([]);
+  const [total, setTotal] = useState(0);
+  const [perPage, setPerPage] = useState(15);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [perPage, setPerPage] = useState(10);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "IN_STORE" | "COLLECTED">("ALL");
+  const [filterTerminal, setFilterTerminal] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"ALL" | "IN_STORE" | "COLLECTED">("ALL");
+
+  // Load terminals for the filter dropdown
+  useEffect(() => {
+    fetch("/api/admin/terminals")
+      .then((r) => r.json())
+      .then((data) => setTerminals(data))
+      .catch(() => {});
+  }, []);
 
   const fetchParcels = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
         page: String(page),
-        ...(query ? { search: query } : {}),
-        ...(statusFilter !== "ALL" ? { status: statusFilter } : {}),
+        ...(query ? { q: query } : {}),
+        ...(filterTerminal ? { terminalId: filterTerminal } : {}),
+        ...(filterStatus !== "ALL" ? { status: filterStatus } : {}),
       });
-      const res = await fetch(`/api/parcels?${params}`);
+      const res = await fetch(`/api/admin/parcels?${params}`);
       if (res.ok) {
         const data = await res.json();
         setParcels(data.parcels);
@@ -55,7 +77,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, query, statusFilter]);
+  }, [page, query, filterTerminal, filterStatus]);
 
   useEffect(() => {
     fetchParcels();
@@ -68,7 +90,7 @@ export default function InventoryPage() {
   }
 
   function handleStatusFilter(val: "ALL" | "IN_STORE" | "COLLECTED") {
-    setStatusFilter(val);
+    setFilterStatus(val);
     setPage(1);
   }
 
@@ -78,20 +100,57 @@ export default function InventoryPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Inventory Overview</h1>
-        <Link href="/checkin">
-          <Button className="bg-indigo-600 hover:bg-indigo-700">
-            + New Check-in
-          </Button>
-        </Link>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Global Parcel Search</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Search and filter parcels across all terminals.
+        </p>
       </div>
 
-      {/* Status Filter Tabs */}
-      <div className="flex gap-2 mb-4">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-[240px] max-w-sm">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Batch ID, receiver, item…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
+            Search
+          </Button>
+        </form>
+
+        <Select
+          value={filterTerminal || "all"}
+          onValueChange={(v) => { setFilterTerminal(v === "all" ? "" : (v ?? "")); setPage(1); }}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue>
+              {filterTerminal
+                ? (terminals.find((t) => t.id === filterTerminal)?.name ?? "Unknown")
+                : "All Terminals"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Terminals</SelectItem>
+            {terminals.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Status Tabs */}
+      <div className="flex gap-2 mb-5">
         {(["ALL", "IN_STORE", "COLLECTED"] as const).map((val) => {
           const labels = { ALL: "All", IN_STORE: "In Store", COLLECTED: "Collected" };
-          const active = statusFilter === val;
+          const active = filterStatus === val;
           return (
             <button
               key={val}
@@ -108,44 +167,31 @@ export default function InventoryPage() {
         })}
       </div>
 
-      {/* Search */}
-      <form onSubmit={handleSearch} className="mb-6">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search by item, receiver, phone or batch ID…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-      </form>
-
       {/* Table */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50">
               <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Item Description
+                Batch ID
+              </TableHead>
+              <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Item
+              </TableHead>
+              <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Terminal
+              </TableHead>
+              <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Receiver
+              </TableHead>
+              <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Custodian
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Status
               </TableHead>
               <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Age
-              </TableHead>
-              <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Custodian (Staff)
-              </TableHead>
-              <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Receiver Phone
-              </TableHead>
-              <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Date Received
-              </TableHead>
-              <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">
-                Action
+                Date
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -158,80 +204,49 @@ export default function InventoryPage() {
               </TableRow>
             ) : parcels.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center text-gray-400">
+                <TableCell colSpan={7} className="py-16 text-center text-gray-400">
+                  <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
                   No parcels found.
                 </TableCell>
               </TableRow>
             ) : (
-              parcels.map((parcel) => (
-                <TableRow key={parcel.id} className="hover:bg-gray-50">
-                  <TableCell>
-                    <p className="font-medium text-gray-900">{parcel.itemDescription}</p>
-                    {parcel.itemCategory && (
-                      <p className="text-xs text-gray-400 mt-0.5">{parcel.itemCategory}</p>
-                    )}
+              parcels.map((p) => (
+                <TableRow key={p.id} className="hover:bg-gray-50">
+                  <TableCell className="font-mono text-xs text-gray-700">
+                    {p.batchId}
                   </TableCell>
-                  <TableCell>
-                    <StatusBadge status={parcel.status} />
+                  <TableCell className="text-gray-900 text-sm font-medium">
+                    {p.itemDescription}
                   </TableCell>
-                  <TableCell>
-                    {parcel.status === ParcelStatus.IN_STORE ? (() => {
-                      const days = Math.floor(
-                        (Date.now() - new Date(parcel.createdAt).getTime()) / 86_400_000
-                      );
-                      const color =
-                        days < 3
-                          ? "bg-green-100 text-green-700"
-                          : days <= 7
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-red-100 text-red-700";
-                      return (
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>
-                          {days}d
-                        </span>
-                      );
-                    })() : <span className="text-gray-300 text-xs">—</span>}
+                  <TableCell className="text-gray-600 text-sm">
+                    {p.terminal?.name ?? <span className="text-gray-400 italic">—</span>}
                   </TableCell>
-                  <TableCell className="text-gray-700">
-                    {parcel.custodian?.name ?? (
+                  <TableCell className="text-gray-700 text-sm">
+                    <p>{p.receiverName}</p>
+                    <p className="text-xs text-gray-400 font-mono">{p.receiverPhone}</p>
+                  </TableCell>
+                  <TableCell className="text-gray-600 text-sm">
+                    {p.custodian?.name ?? (
                       <span className="text-gray-400 italic">Unassigned</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-gray-700 font-mono text-sm">
-                    {parcel.receiverPhone}
+                  <TableCell>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        p.status === "IN_STORE"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-emerald-100 text-emerald-700"
+                      }`}
+                    >
+                      {p.status === "IN_STORE" ? "In Store" : "Collected"}
+                    </span>
                   </TableCell>
-                  <TableCell className="text-gray-600 text-sm">
-                    {new Date(parcel.createdAt).toLocaleDateString("en-NG", {
+                  <TableCell className="text-gray-500 text-sm">
+                    {new Date(p.createdAt).toLocaleDateString("en-NG", {
                       day: "2-digit",
                       month: "short",
                       year: "numeric",
                     })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {parcel.status === ParcelStatus.IN_STORE ? (
-                      <div className="flex items-center justify-end gap-3">
-                        <Link
-                          href={`/pickup/${parcel.id}`}
-                          className="text-indigo-600 hover:underline text-sm font-semibold"
-                        >
-                          Pickup
-                        </Link>
-                        <span className="text-gray-300">|</span>
-                        <Link
-                          href={`/inventory/${parcel.id}`}
-                          className="text-gray-500 hover:underline text-sm font-medium"
-                        >
-                          Edit
-                        </Link>
-                      </div>
-                    ) : (
-                      <Link
-                        href={`/inventory/${parcel.id}`}
-                        className="text-gray-500 hover:underline text-sm font-medium"
-                      >
-                        View History
-                      </Link>
-                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -244,7 +259,7 @@ export default function InventoryPage() {
           <p className="text-sm text-gray-500">
             {total === 0
               ? "No items"
-              : `Showing ${from} to ${to} of ${total} item${total !== 1 ? "s" : ""}`}
+              : `Showing ${from}–${to} of ${total} parcel${total !== 1 ? "s" : ""}`}
           </p>
           <div className="flex gap-2">
             <Button

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, AlertTriangle, CheckCircle2, Package } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle2, Package, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,6 +27,12 @@ interface Parcel {
 interface CollectedState {
   receiverName: string;
   confirmedAt: string;
+  batchId: string;
+  itemDescription: string;
+  terminalName: string;
+  deliveryFee: number;
+  storageFee: number;
+  idVerified: boolean;
 }
 
 export default function PickupPage({
@@ -75,6 +81,12 @@ export default function PickupPage({
         setCollected({
           receiverName: parcel!.receiverName,
           confirmedAt: new Date().toISOString(),
+          batchId: parcel!.batchId,
+          itemDescription: parcel!.itemDescription,
+          terminalName: parcel!.terminal?.name ?? "",
+          deliveryFee: parseFloat(parcel!.deliveryFee) || 0,
+          storageFee: parseFloat(parcel!.storageFee) || 0,
+          idVerified,
         });
       } else {
         const data = await res.json();
@@ -103,32 +115,109 @@ export default function PickupPage({
   }
 
   if (collected) {
+    const fmtFee = (n: number) =>
+      "₦" + n.toLocaleString("en-NG", { minimumFractionDigits: 2 });
+    const totalFee = collected.deliveryFee + collected.storageFee;
+
     return (
-      <div className="max-w-lg mx-auto text-center py-20">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 mb-5">
-          <CheckCircle2 className="w-10 h-10 text-emerald-600" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">Package Collected!</h2>
-        <p className="text-gray-500 text-sm mb-1">
-          Handed over to <span className="font-semibold text-gray-700">{collected.receiverName}</span>
-        </p>
-        <p className="text-gray-400 text-xs mb-8">
-          {new Date(collected.confirmedAt).toLocaleString("en-NG")}
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/inventory">
-            <Button variant="outline" className="w-full sm:w-auto">
-              Back to Inventory
+      <>
+        {/* Print styles */}
+        <style>{`
+          @media print {
+            body * { visibility: hidden !important; }
+            #receipt, #receipt * { visibility: visible !important; }
+            #receipt { position: fixed; top: 0; left: 0; width: 100%; padding: 24px; }
+            .no-print { display: none !important; }
+          }
+        `}</style>
+
+        <div className="max-w-lg mx-auto text-center py-12 no-print">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 mb-5">
+            <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">Package Collected!</h2>
+          <p className="text-gray-500 text-sm mb-1">
+            Handed over to{" "}
+            <span className="font-semibold text-gray-700">{collected.receiverName}</span>
+          </p>
+          <p className="text-gray-400 text-xs mb-8">
+            {new Date(collected.confirmedAt).toLocaleString("en-NG")}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/inventory">
+              <Button variant="outline" className="w-full sm:w-auto">
+                Back to Inventory
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => window.print()}
+            >
+              <Printer className="w-4 h-4 mr-2" />
+              Print Receipt
             </Button>
-          </Link>
-          <Link href="/checkin">
-            <Button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700">
-              <Package className="w-4 h-4 mr-2" />
-              New Check-in
-            </Button>
-          </Link>
+            <Link href="/checkin">
+              <Button className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700">
+                <Package className="w-4 h-4 mr-2" />
+                New Check-in
+              </Button>
+            </Link>
+          </div>
         </div>
-      </div>
+
+        {/* Print-only receipt */}
+        <div id="receipt" className="hidden print:block text-sm text-gray-800 font-sans">
+          <div className="text-center mb-6">
+            <h1 className="text-xl font-bold">StoreKeeper Pro</h1>
+            {collected.terminalName && (
+              <p className="text-gray-500">{collected.terminalName}</p>
+            )}
+            <p className="text-xs text-gray-400 mt-1">PICKUP RECEIPT</p>
+          </div>
+          <div className="border-t border-b border-gray-300 py-4 mb-4 space-y-2">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Batch ID</span>
+              <span className="font-mono font-semibold">{collected.batchId}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Item</span>
+              <span className="font-semibold">{collected.itemDescription}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Receiver</span>
+              <span className="font-semibold">{collected.receiverName}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">ID Verified</span>
+              <span className="font-semibold">{collected.idVerified ? "Yes" : "No"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Collected At</span>
+              <span className="font-semibold">
+                {new Date(collected.confirmedAt).toLocaleString("en-NG")}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-1 mb-4">
+            <div className="flex justify-between text-gray-600">
+              <span>Delivery Fee</span>
+              <span>{fmtFee(collected.deliveryFee)}</span>
+            </div>
+            <div className="flex justify-between text-gray-600">
+              <span>Storage Fee</span>
+              <span>{fmtFee(collected.storageFee)}</span>
+            </div>
+            <div className="flex justify-between font-bold border-t border-gray-300 pt-2 mt-2">
+              <span>Total Paid</span>
+              <span>{fmtFee(totalFee)}</span>
+            </div>
+          </div>
+          <p className="text-center text-xs text-gray-400 mt-6">
+            Thank you for using StoreKeeper Pro
+          </p>
+        </div>
+      </>
     );
   }
 

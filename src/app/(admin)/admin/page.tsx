@@ -1,18 +1,29 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
-import { Building2, Users, Package, TrendingUp, ArrowRight } from "lucide-react";
-import { Role } from "@prisma/client";
+import { Building2, Users, Package, TrendingUp, ArrowRight, Wallet, CheckCircle2 } from "lucide-react";
+import { Role, ParcelStatus } from "@prisma/client";
 
 export default async function AdminOverviewPage() {
   const session = await auth();
   const firstName = session?.user?.name?.split(" ")[0] ?? "Admin";
 
-  const [terminalCount, userCount, parcelCount] = await Promise.all([
+  const [terminalCount, userCount, inStoreCount, collectedCount, revenue] = await Promise.all([
     prisma.terminal.count(),
     prisma.user.count({ where: { role: { not: Role.SUPER_ADMIN } } }),
-    prisma.parcel.count(),
+    prisma.parcel.count({ where: { status: ParcelStatus.IN_STORE } }),
+    prisma.parcel.count({ where: { status: ParcelStatus.COLLECTED } }),
+    prisma.parcel.aggregate({
+      where: { status: ParcelStatus.COLLECTED },
+      _sum: { deliveryFee: true, storageFee: true },
+    }),
   ]);
+
+  const totalRevenue =
+    Number(revenue._sum.deliveryFee ?? 0) +
+    Number(revenue._sum.storageFee ?? 0);
+
+  const fmtRevenue = "₦" + totalRevenue.toLocaleString("en-NG", { minimumFractionDigits: 2 });
 
   return (
     <div>
@@ -25,7 +36,7 @@ export default async function AdminOverviewPage() {
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
@@ -57,12 +68,27 @@ export default async function AdminOverviewPage() {
             <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
               <Package className="w-6 h-6 text-blue-600" />
             </div>
-            <span className="bg-green-100 text-green-600 text-xs font-bold px-2 py-1 rounded-lg flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" /> Total
+            <span className="bg-amber-100 text-amber-600 text-xs font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+              <Package className="w-3 h-3" /> In Store
             </span>
           </div>
-          <p className="text-slate-500 text-sm font-medium">Total Parcels</p>
-          <h4 className="text-3xl font-bold text-slate-900 mt-1">{parcelCount.toLocaleString()}</h4>
+          <p className="text-slate-500 text-sm font-medium">Parcels In Store</p>
+          <h4 className="text-3xl font-bold text-slate-900 mt-1">{inStoreCount.toLocaleString()}</h4>
+          <p className="text-xs text-slate-400 mt-1">{collectedCount.toLocaleString()} collected</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <Wallet className="w-6 h-6 text-emerald-600" />
+            </div>
+            <span className="bg-emerald-100 text-emerald-600 text-xs font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" /> Earned
+            </span>
+          </div>
+          <p className="text-slate-500 text-sm font-medium">Total Revenue</p>
+          <h4 className="text-2xl font-bold text-slate-900 mt-1">{fmtRevenue}</h4>
+          <p className="text-xs text-slate-400 mt-1">From collected parcels</p>
         </div>
       </div>
 
