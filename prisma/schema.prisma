@@ -68,11 +68,13 @@ model Parcel {
 }
 
 model Handover {
-  id          String   @id @default(cuid())
-  parcelId    String   @unique
-  signature   String   @db.Text
-  idVerified  Boolean  @default(false)
-  confirmedAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  parcelId     String   @unique
+  signature    String   @db.Text
+  idVerified   Boolean  @default(false)
+  confirmedAt  DateTime @default(now())
+  note         String?  @db.Text  // admin override: payment reference / reason
+  overriddenBy String?            // admin email who performed the manual override
 
   parcel Parcel @relation(fields: [parcelId], references: [id])
 }
