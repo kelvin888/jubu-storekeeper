@@ -37,7 +37,7 @@ export default async function AdminOverviewPage() {
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <Link href="/admin/terminals" className="group bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
               <Building2 className="w-6 h-6 text-purple-700" />
@@ -48,9 +48,12 @@ export default async function AdminOverviewPage() {
           </div>
           <p className="text-slate-500 text-sm font-medium">Active Terminals</p>
           <h4 className="text-3xl font-bold text-slate-900 mt-1">{terminalCount}</h4>
-        </div>
+          <p className="text-xs text-indigo-500 mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            View all <ArrowRight className="w-3 h-3" />
+          </p>
+        </Link>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <Link href="/admin/users" className="group bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
               <Users className="w-6 h-6 text-orange-600" />
@@ -61,9 +64,12 @@ export default async function AdminOverviewPage() {
           </div>
           <p className="text-slate-500 text-sm font-medium">Staff Members</p>
           <h4 className="text-3xl font-bold text-slate-900 mt-1">{userCount}</h4>
-        </div>
+          <p className="text-xs text-indigo-500 mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            Manage staff <ArrowRight className="w-3 h-3" />
+          </p>
+        </Link>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <Link href="/admin/parcels?status=IN_STORE" className="group bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
               <Package className="w-6 h-6 text-blue-600" />
@@ -75,9 +81,12 @@ export default async function AdminOverviewPage() {
           <p className="text-slate-500 text-sm font-medium">Parcels In Store</p>
           <h4 className="text-3xl font-bold text-slate-900 mt-1">{inStoreCount.toLocaleString()}</h4>
           <p className="text-xs text-slate-400 mt-1">{collectedCount.toLocaleString()} collected</p>
-        </div>
+          <p className="text-xs text-indigo-500 mt-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            View parcels <ArrowRight className="w-3 h-3" />
+          </p>
+        </Link>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <Link href="/admin/parcels?status=COLLECTED" className="group bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
               <Wallet className="w-6 h-6 text-emerald-600" />
@@ -89,7 +98,10 @@ export default async function AdminOverviewPage() {
           <p className="text-slate-500 text-sm font-medium">Total Revenue</p>
           <h4 className="text-2xl font-bold text-slate-900 mt-1">{fmtRevenue}</h4>
           <p className="text-xs text-slate-400 mt-1">From collected parcels</p>
-        </div>
+          <p className="text-xs text-indigo-500 mt-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            View collected <ArrowRight className="w-3 h-3" />
+          </p>
+        </Link>
       </div>
 
       {/* Quick Management */}

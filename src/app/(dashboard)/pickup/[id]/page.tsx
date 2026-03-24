@@ -8,7 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { SignaturePad, type SignaturePadHandle } from "@/components/SignaturePad";
+import { CameraCapture } from "@/components/CameraCapture";
 import { ParcelStatus } from "@prisma/client";
+
+async function uploadImages(images: string[], folder: "checkin" | "handover") {
+  return Promise.all(
+    images.map((data) =>
+      fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data, folder }),
+      }).then((r) => r.json() as Promise<{ url: string; publicId: string }>)
+    )
+  );
+}
 
 interface Parcel {
   id: string;
@@ -46,6 +59,7 @@ export default function PickupPage({
   const [parcel, setParcel] = useState<Parcel | null>(null);
   const [loading, setLoading] = useState(true);
   const [idVerified, setIdVerified] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
   const [collected, setCollected] = useState<CollectedState | null>(null);
@@ -61,6 +75,10 @@ export default function PickupPage({
   }, [id]);
 
   async function handleConfirm() {
+    if (photos.length === 0) {
+      setError("Please take at least one evidence photo before confirming.");
+      return;
+    }
     if (!signatureRef.current || signatureRef.current.isEmpty()) {
       setError("Please have the receiver sign before confirming.");
       return;
@@ -71,10 +89,14 @@ export default function PickupPage({
     setError("");
 
     try {
+      // Upload handover photos to Cloudinary
+      const uploaded = await uploadImages(photos, "handover");
+      const imageUrls = uploaded.map((u) => ({ url: u.url, publicId: u.publicId }));
+
       const res = await fetch(`/api/parcels/${id}/handover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signature, idVerified }),
+        body: JSON.stringify({ signature, idVerified, imageUrls }),
       });
 
       if (res.ok) {
@@ -338,6 +360,24 @@ export default function PickupPage({
         </CardContent>
       </Card>
 
+      {/* Collection Evidence Photos */}
+      <Card className="mb-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">
+            Collection Evidence <span className="text-red-500 text-sm font-normal">*</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-gray-500">
+            Take up to 3 photos as proof that the receiver collected the parcel in person.
+          </p>
+          <CameraCapture images={photos} onChange={setPhotos} max={3} />
+          {photos.length === 0 && (
+            <p className="text-xs text-red-500">At least one photo is required to confirm handover.</p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Receiver Confirmation */}
       <Card className="mb-4">
         <CardHeader className="pb-2">
@@ -375,11 +415,11 @@ export default function PickupPage({
 
       <Button
         onClick={handleConfirm}
-        disabled={confirming}
+        disabled={confirming || photos.length === 0}
         className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 text-base font-semibold"
       >
         <CheckCircle2 className="w-5 h-5 mr-2" />
-        {confirming ? "Confirming…" : "Confirm Cash Received & Handover"}
+        {confirming ? "Uploading & Confirming…" : "Confirm Cash Received & Handover"}
       </Button>
 
       <p className="text-center text-xs text-gray-400 mt-3">

@@ -6,6 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { CameraCapture } from "@/components/CameraCapture";
+
+async function uploadImages(images: string[], folder: "checkin" | "handover") {
+  return Promise.all(
+    images.map((data) =>
+      fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data, folder }),
+      }).then((r) => r.json() as Promise<{ url: string; publicId: string }>)
+    )
+  );
+}
 
 const EMPTY = {
   itemDescription: "",
@@ -22,6 +35,7 @@ const EMPTY = {
 export default function CheckInPage() {
   const router = useRouter();
   const [form, setForm] = useState(EMPTY);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -31,15 +45,26 @@ export default function CheckInPage() {
 
   function clear() {
     setForm(EMPTY);
+    setPhotos([]);
     setError("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (photos.length === 0) {
+      setError("At least one evidence photo is required.");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
+      // Upload photos to Cloudinary first
+      const uploaded = await uploadImages(photos, "checkin");
+      const imageUrls = uploaded.map((u) => ({ url: u.url, publicId: u.publicId }));
+
       const res = await fetch("/api/parcels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,6 +72,7 @@ export default function CheckInPage() {
           ...form,
           deliveryFee: parseFloat(form.deliveryFee) || 0,
           storageFee: parseFloat(form.storageFee) || 0,
+          imageUrls,
         }),
       });
 
@@ -211,14 +237,32 @@ export default function CheckInPage() {
           </CardContent>
         </Card>
 
+        {/* Section 4 — Evidence Photos */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base text-indigo-600">
+              4. Evidence Photos <span className="text-red-500">*</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-gray-500">
+              Take up to 3 photos of the parcel as physical evidence of its arrival condition.
+            </p>
+            <CameraCapture images={photos} onChange={setPhotos} max={3} />
+            {photos.length === 0 && (
+              <p className="text-xs text-red-500">At least one photo is required to check in.</p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Actions */}
         <div className="flex gap-3 pt-1">
           <Button
             type="submit"
-            disabled={loading}
+            disabled={loading || photos.length === 0}
             className="flex-1 bg-indigo-600 hover:bg-indigo-700 h-11 text-base"
           >
-            {loading ? "Checking in…" : "Complete Check-in"}
+            {loading ? "Uploading & Checking in…" : "Complete Check-in"}
           </Button>
           <Button
             type="button"

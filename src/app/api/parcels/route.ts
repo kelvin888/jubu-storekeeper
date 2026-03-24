@@ -83,28 +83,46 @@ export async function POST(req: NextRequest) {
     receiverPhone,
     deliveryFee,
     storageFee,
+    imageUrls,
   } = body;
 
   if (!itemDescription || !senderName || !receiverName || !receiverPhone) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  const images: { url: string; publicId: string }[] = Array.isArray(imageUrls) ? imageUrls : [];
+
   const batchId = await generateBatchId();
 
-  const parcel = await prisma.parcel.create({
-    data: {
-      batchId,
-      itemDescription: String(itemDescription).trim(),
-      itemCategory: itemCategory ? String(itemCategory).trim() : null,
-      driverName: driverName ? String(driverName).trim() : null,
-      vehicleNumber: vehicleNumber ? String(vehicleNumber).trim() : null,
-      senderName: String(senderName).trim(),
-      receiverName: String(receiverName).trim(),
-      receiverPhone: String(receiverPhone).trim(),
-      deliveryFee: parseFloat(deliveryFee) || 0,
-      storageFee: parseFloat(storageFee) || 0,
-      terminalId: session.user.terminalId,
-    },
+  const parcel = await prisma.$transaction(async (tx) => {
+    const created = await tx.parcel.create({
+      data: {
+        batchId,
+        itemDescription: String(itemDescription).trim(),
+        itemCategory: itemCategory ? String(itemCategory).trim() : null,
+        driverName: driverName ? String(driverName).trim() : null,
+        vehicleNumber: vehicleNumber ? String(vehicleNumber).trim() : null,
+        senderName: String(senderName).trim(),
+        receiverName: String(receiverName).trim(),
+        receiverPhone: String(receiverPhone).trim(),
+        deliveryFee: parseFloat(deliveryFee) || 0,
+        storageFee: parseFloat(storageFee) || 0,
+        terminalId: session.user.terminalId!,
+      },
+    });
+
+    if (images.length > 0) {
+      await tx.parcelImage.createMany({
+        data: images.map((img) => ({
+          parcelId: created.id,
+          url: img.url,
+          publicId: img.publicId,
+          type: "CHECK_IN" as const,
+        })),
+      });
+    }
+
+    return created;
   });
 
   return NextResponse.json(parcel, { status: 201 });

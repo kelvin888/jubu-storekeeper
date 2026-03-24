@@ -26,11 +26,13 @@ export async function POST(
   }
 
   const body = await req.json();
-  const { signature, idVerified } = body;
+  const { signature, idVerified, imageUrls } = body;
 
   if (!signature) {
     return NextResponse.json({ error: "Signature is required" }, { status: 400 });
   }
+
+  const images: { url: string; publicId: string }[] = Array.isArray(imageUrls) ? imageUrls : [];
 
   const [updatedParcel] = await prisma.$transaction([
     prisma.parcel.update({
@@ -44,6 +46,18 @@ export async function POST(
         idVerified: Boolean(idVerified),
       },
     }),
+    ...(images.length > 0
+      ? [
+          prisma.parcelImage.createMany({
+            data: images.map((img) => ({
+              parcelId: id,
+              url: img.url,
+              publicId: img.publicId,
+              type: "HANDOVER" as const,
+            })),
+          }),
+        ]
+      : []),
   ]);
 
   return NextResponse.json(updatedParcel);

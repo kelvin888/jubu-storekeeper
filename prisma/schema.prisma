@@ -61,9 +61,10 @@ model Parcel {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  terminal  Terminal @relation(fields: [terminalId], references: [id])
-  custodian User?    @relation("CustodianParcels", fields: [custodianId], references: [id])
+  terminal  Terminal      @relation(fields: [terminalId], references: [id])
+  custodian User?         @relation("CustodianParcels", fields: [custodianId], references: [id])
   handover  Handover?
+  images    ParcelImage[]
 }
 
 model Handover {
@@ -72,6 +73,22 @@ model Handover {
   signature   String   @db.Text
   idVerified  Boolean  @default(false)
   confirmedAt DateTime @default(now())
+
+  parcel Parcel @relation(fields: [parcelId], references: [id])
+}
+
+enum ImageType {
+  CHECK_IN
+  HANDOVER
+}
+
+model ParcelImage {
+  id        String    @id @default(cuid())
+  parcelId  String
+  url       String
+  publicId  String
+  type      ImageType
+  createdAt DateTime  @default(now())
 
   parcel Parcel @relation(fields: [parcelId], references: [id])
 }

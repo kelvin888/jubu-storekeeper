@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ interface Parcel {
 }
 
 export default function AdminParcelsPage() {
+  const searchParams = useSearchParams();
+
   const [terminals, setTerminals] = useState<Terminal[]>([]);
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [total, setTotal] = useState(0);
@@ -48,7 +51,10 @@ export default function AdminParcelsPage() {
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [filterTerminal, setFilterTerminal] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"ALL" | "IN_STORE" | "COLLECTED">("ALL");
+  const [filterStatus, setFilterStatus] = useState<"ALL" | "IN_STORE" | "COLLECTED">(() => {
+    const s = searchParams.get("status");
+    return s === "IN_STORE" || s === "COLLECTED" ? s : "ALL";
+  });
 
   // Load terminals for the filter dropdown
   useEffect(() => {

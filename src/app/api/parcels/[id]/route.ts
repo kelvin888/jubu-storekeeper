@@ -21,6 +21,7 @@ export async function GET(
       custodian: { select: { id: true, name: true, email: true } },
       terminal: { select: { id: true, name: true, location: true } },
       handover: true,
+      images: { orderBy: { createdAt: "asc" } },
     },
   });
 
