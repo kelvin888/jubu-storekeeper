@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { SignaturePad, type SignaturePadHandle } from "@/components/SignaturePad";
 import { CameraCapture } from "@/components/CameraCapture";
+import { ImageLightbox } from "@/components/ImageLightbox";
 import { ParcelStatus } from "@prisma/client";
 
 async function uploadImages(images: string[], folder: "checkin" | "handover") {
@@ -23,6 +24,12 @@ async function uploadImages(images: string[], folder: "checkin" | "handover") {
   );
 }
 
+interface ParcelImage {
+  id: string;
+  url: string;
+  type: "CHECK_IN" | "HANDOVER";
+}
+
 interface Parcel {
   id: string;
   batchId: string;
@@ -35,6 +42,7 @@ interface Parcel {
   storageFee: string;
   status: ParcelStatus;
   terminal: { name: string; location: string } | null;
+  images: ParcelImage[];
 }
 
 interface CollectedState {
@@ -302,6 +310,20 @@ export default function PickupPage({
               </div>
             </div>
           </div>
+          {parcel.images.filter((img) => img.type === "CHECK_IN").length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                Arrival Photos
+              </p>
+              <ImageLightbox
+                images={parcel.images
+                  .filter((img) => img.type === "CHECK_IN")
+                  .map((img) => ({ id: img.id, url: img.url, alt: "Parcel arrival photo" }))}
+                thumbnailClassName="w-20 h-20"
+                accentColor="indigo"
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Search, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ interface Parcel {
 }
 
 export default function AdminParcelsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [terminals, setTerminals] = useState<Terminal[]>([]);
@@ -217,7 +218,7 @@ export default function AdminParcelsPage() {
               </TableRow>
             ) : (
               parcels.map((p) => (
-                <TableRow key={p.id} className="hover:bg-gray-50">
+                <TableRow key={p.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => router.push(`/admin/parcels/${p.id}`)}>
                   <TableCell className="font-mono text-xs text-gray-700">
                     {p.batchId}
                   </TableCell>

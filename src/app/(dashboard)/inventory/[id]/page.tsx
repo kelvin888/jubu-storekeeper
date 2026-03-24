@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, ImageOff } from "lucide-react";
+import { ImageLightbox } from "@/components/ImageLightbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -227,20 +228,11 @@ export default function InventoryDetailPage({
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                     Arrival — Check-in
                   </p>
-                  <div className="flex flex-wrap gap-3">
-                    {checkInPhotos.map((img) => (
-                      <a
-                        key={img.id}
-                        href={img.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block w-24 h-24 rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-indigo-400 transition"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img.url} alt="Check-in evidence" className="w-full h-full object-cover" />
-                      </a>
-                    ))}
-                  </div>
+                  <ImageLightbox
+                    images={checkInPhotos.map((img) => ({ id: img.id, url: img.url, alt: "Check-in evidence" }))}
+                    thumbnailClassName="w-24 h-24"
+                    accentColor="indigo"
+                  />
                 </div>
               )}
               {handoverPhotos.length > 0 && (
@@ -248,20 +240,11 @@ export default function InventoryDetailPage({
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                     Collection — Handover
                   </p>
-                  <div className="flex flex-wrap gap-3">
-                    {handoverPhotos.map((img) => (
-                      <a
-                        key={img.id}
-                        href={img.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block w-24 h-24 rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-emerald-400 transition"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img.url} alt="Handover evidence" className="w-full h-full object-cover" />
-                      </a>
-                    ))}
-                  </div>
+                  <ImageLightbox
+                    images={handoverPhotos.map((img) => ({ id: img.id, url: img.url, alt: "Handover evidence" }))}
+                    thumbnailClassName="w-24 h-24"
+                    accentColor="emerald"
+                  />
                 </div>
               )}
             </CardContent>
